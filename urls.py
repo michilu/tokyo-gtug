@@ -7,6 +7,8 @@ Kay URL dispatch setting.
 :license: BSD, see LICENSE for more details.
 """
 
+from event import urls as event_urls
+
 from werkzeug.routing import (
   Map, Rule, Submount,
   EndpointPrefix, RuleTemplate,
@@ -14,7 +16,10 @@ from werkzeug.routing import (
 
 def make_url():
   return Map([
+    Submount("/", event_urls.make_rules()),
   ])
 
 all_views = {
 }
+
+all_views.update(event_urls.all_views)

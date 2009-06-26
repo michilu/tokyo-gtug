@@ -32,6 +32,7 @@ DEFAULT_LANG = 'en'
 
 INSTALLED_APPS = (
   'kay.sessions',
+  'event',
 )
 
 MIDDLEWARE_CLASSES = (
