@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
-# event.views
-
 import logging
 
-import simplejson as json
 from google.appengine.api import users
 from google.appengine.api import memcache
 from werkzeug import (
@@ -21,31 +18,31 @@ from kay.utils import (
 from kay.i18n import gettext as _
 from kay.auth.decorators import login_required
 
-# Create your views here.
+method = lambda request, model: request.environ["REQUEST_METHOD"]
+methods = {
+  "HEAD": method,
+  "GET": method,
+  "POST": method,
+  "PUT": method,
+  "DELETE": method,
+  "OPTIONS": method,
+  "TRACE": method,
+}
 
-def index(request):
-  return render_to_response('event/index.html', {'message': _('Hello')})
-
-def rest(model):
-  mimetype = "text/json"
-  def func(request, format="json"):
-    message = request.environ.keys()
-    if request.environ["REQUEST_METHOD"] == "HEAD":
-      message = "HEAD"
-    elif request.environ["REQUEST_METHOD"] == "GET":
-      message = "GET"
-    elif request.environ["REQUEST_METHOD"] == "POST":
-      message = "POST"
-    elif request.environ["REQUEST_METHOD"] == "PUT":
-      message = "PUT"
-    elif request.environ["REQUEST_METHOD"] == "DELETE":
-      message = "DELETE"
-    elif request.environ["REQUEST_METHOD"] == "OPTIONS":
-      message = "OPTIONS"
-    elif request.environ["REQUEST_METHOD"] == "TRACE":
-      message = "TRACE"
+def rest(model, methods=methods, acl=None):
+  mimetype = "text/yaml"
+  def func(request, format="yaml"):
+    if format == "json":
+      import simplejson as json
+      mimetype = "text/json"
     else:
-        raise
-    return Response(_(str("%s: %s" % (message, format))),
+      import yaml
+      mimetype = "text/yaml"
+    method = request.environ["REQUEST_METHOD"]
+    if method in methods:
+      result = methods[method](request, model)
+    else:
+      raise
+    return Response(_(str("%s: %s\n" % (result, format))),
                       mimetype=mimetype)
   return func
