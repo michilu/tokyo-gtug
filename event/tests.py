@@ -1,20 +1,12 @@
 # -*- coding: utf-8 -*-
-import unittest
+from kay.tests import TestCase
 
-from werkzeug import Client, BaseResponse, test_app
+class RESTTestCase(TestCase):
 
-class BaseTestCase(unittest.TestCase):
-
-  def setUp(self):
-    pass
-
-  def tearDown(self):
-    pass
-
-class RESTTestCase(BaseTestCase):
-
-  def test(self):
-    c = Client(test_app, BaseResponse)
-    response = c.get('/')
+  def test_get(self):
+    response = self.client.get('/event')
     self.failUnless(response.status_code == 200)
-    self.failUnless(response.status_code == 404)
+
+  def test_head(self):
+    response = self.client.get('/event')
+    self.failUnless(response.status_code == 200)
