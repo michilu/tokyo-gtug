@@ -31,8 +31,7 @@ def get(request, model, item):
     data = data.get()
   else:
     raise NotFound
-
-  return dict(data=data)
+  return 200, dict(data=data)
 
 def head(request, model, item):
   return 200, dict(data=request.environ["REQUEST_METHOD"])
