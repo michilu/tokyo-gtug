@@ -7,8 +7,10 @@ from werkzeug import (
   unescape, redirect, Response,
 )
 from werkzeug.exceptions import (
+  HTTPException,
   NotFound, MethodNotAllowed, BadRequest
 )
+from werkzeug._internal import HTTP_STATUS_CODES
 
 from kay.utils import (
   render_to_response, reverse,
@@ -18,16 +20,60 @@ from kay.utils import (
 from kay.i18n import gettext as _
 from kay.auth.decorators import login_required
 
-method = lambda request, model: dict(data=request.environ["REQUEST_METHOD"])
-methods = {
-  "HEAD": method,
-  "GET": method,
-  "POST": method,
-  "PUT": method,
-  "DELETE": method,
-  "OPTIONS": method,
-  "TRACE": method,
-}
+def get(request, model, item):
+  if item == None:
+    data = model.all()
+  elif isinstance(item, int):
+    data = model.get_by_id(item)
+  else:
+    data = model.get_by_key_name(item)
+  if data:
+    data = data.get()
+  else:
+    raise NotFound
+
+  return dict(data=data)
+
+def head(request, model, item):
+  return 200, dict(data=request.environ["REQUEST_METHOD"])
+
+def post(request, model, item):
+  return 200, dict(data=request.environ["REQUEST_METHOD"])
+
+def put(request, model, item):
+  return 200, dict(data=request.environ["REQUEST_METHOD"])
+
+def delete(request, model, item):
+  return 200, dict(data=request.environ["REQUEST_METHOD"])
+
+def options(request, model, item):
+  return 200, dict(data=request.environ["REQUEST_METHOD"])
+
+def trace(request, model, item):
+  return 200, dict(data=request.environ["REQUEST_METHOD"])
+
+class Methods(dict):
+  def __getitem__(self, name):
+    def func(*argv, **kwargv):
+      try:
+        return super(Methods, self).__getitem__(name)(*argv, **kwargv)
+      except HTTPException, e:
+        import re
+        return e.code, dict(
+          status_code = e.code,
+          errors = [HTTP_STATUS_CODES[e.code], re.sub(r"<(/)?p>", "", e.description)],
+        )
+    return func
+
+methods = Methods({
+  "GET": get,
+  "HEAD": head,
+  "POST": post,
+  "PUT": put,
+  "DELETE": delete,
+  "OPTIONS": options,
+  "TRACE": trace,
+})
 
 def format_json(data):
   import simplejson as json
@@ -50,12 +96,13 @@ formater = Formater({
 })
 
 def rest(model, methods=methods, acl=None, formater=formater):
-  def func(request, format="yaml"):
+  def func(request, item=None, format="yaml"):
     method = request.environ["REQUEST_METHOD"]
     if method in methods:
-      result, mimetype = formater[format](methods[method](request, model))
+      status_code, data = methods[method](request, model, item)
+      result, mimetype = formater[format](data)
     else:
       raise
     return Response(_(result if result.endswith("\n") else "%s\n" % result),
-                      mimetype=mimetype)
+             status=status_code, mimetype=mimetype)
   return func
