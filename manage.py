@@ -27,23 +27,11 @@ from kay.management.appcfg import (
   do_appcfg, do_appcfg_passthru_argv,
 )
 from kay.management.bulkloader import do_bulkloader_passthru_argv
+from kay.management.test import run_test
 
 action_shell = shell
 action_rshell = rshell
 action_startapp = startapp
-
-def run_test():
-  import unittest
-  from kay.conf import settings
-  suite = unittest.TestSuite()
-  for app_name in settings.INSTALLED_APPS:
-    try:
-      tests_mod = __import__("%s.tests" % app_name, fromlist=[app_name])
-    except ImportError:
-      pass
-    else:
-      suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(tests_mod))
-  unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
   if len(sys.argv) == 1:
