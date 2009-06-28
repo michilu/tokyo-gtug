@@ -31,25 +31,35 @@ def get(request, model, item):
     data = data.get()
   else:
     raise NotFound
-  return 200, dict(data=data)
+  return 200, dict(data=data), {}
 
 def head(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"])
+  return get(request, model, item)
 
 def post(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"])
+  if item != None:
+    raise
+  elif isinstance(item, int):
+    data = model.get_by_id(item)
+  else:
+    data = model.get_by_key_name(item)
+  if data:
+    data = data.get()
+  else:
+    raise NotFound
+  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
 
 def put(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"])
+  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
 
 def delete(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"])
+  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
 
 def options(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"])
+  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
 
 def trace(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"])
+  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
 
 class Methods(dict):
   def __getitem__(self, name):
@@ -98,10 +108,10 @@ def rest(model, methods=methods, acl=None, formater=formater):
   def func(request, item=None, format="yaml"):
     method = request.environ["REQUEST_METHOD"]
     if method in methods:
-      status_code, data = methods[method](request, model, item)
+      status_code, data, headers = methods[method](request, model, item)
       result, mimetype = formater[format](data)
     else:
       raise
     return Response(_(result if result.endswith("\n") else "%s\n" % result),
-             status=status_code, mimetype=mimetype)
+             status=status_code, headers=headers, mimetype=mimetype)
   return func
