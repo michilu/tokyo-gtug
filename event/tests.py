@@ -3,7 +3,7 @@ from kay.tests import TestCase
 
 class RESTTestCase(TestCase):
 
-  def test_get(self):
+  def test_get_model(self):
     response = self.client.get('/event')
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
@@ -19,6 +19,15 @@ class RESTTestCase(TestCase):
     response = self.client.get('/event.UNKOWN')
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+
+  def test_get_item(self):
+    response = self.client.get('/event/0')
+    self.assertEqual(response.status_code, 404)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+
+    #response = self.client.get('/event/1')
+    #self.assertEqual(response.status_code, 200)
+    #self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
 
   def test_head(self):
     response = self.client.head('/event')

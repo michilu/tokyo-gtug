@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from google.appengine.api import users
-from google.appengine.api import memcache
+from google.appengine.api import memcache, users
+from google.appengine.ext import db
 from werkzeug import (
   unescape, redirect, Response,
 )
@@ -24,7 +24,10 @@ def get(request, model, item):
   if item == None:
     data = model.all()
   elif isinstance(item, int):
-    data = model.get_by_id(item)
+    try:
+      data = model.get_by_id(item)
+    except db.BadKeyError:
+      raise NotFound
   else:
     data = model.get_by_key_name(item)
   if data:
@@ -71,7 +74,7 @@ class Methods(dict):
         return e.code, dict(
           status_code = e.code,
           errors = [HTTP_STATUS_CODES[e.code], re.sub(r"<(/)?p>", "", e.description)],
-        )
+        ), {}
     return func
 
 methods = Methods({
