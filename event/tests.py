@@ -52,6 +52,10 @@ class RESTTestCase(TestCase):
     self.assertEqual(response.status_code, 400)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
 
+    response = self.client.post('/event.json')
+    self.assertEqual(response.status_code, 400)
+    self.assertEqual(response.headers["Content-Type"], "text/json; charset=utf-8")
+
     #SYNC
     response = self.client.post('/event?sync=true')
     self.assertEqual(response.status_code, 400)

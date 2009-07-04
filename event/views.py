@@ -100,12 +100,15 @@ methods = Methods({
 
 def format_json(data):
   import simplejson as json
-  item = dict()
   result = list()
-  for d in data["data"]:
-    item.update(d._entity)
-    item.update(key=str(d.key()))
-    result.append(item)
+  if "data" in data.keys():
+    for d in data["data"]:
+      item = dict()
+      item.update(d._entity)
+      item.update(key=str(d.key()))
+      result.append(item)
+  else:
+    result = data
   return json.dumps(result, indent=2, skipkeys=True), "text/json"
 
 def format_yaml(data):
