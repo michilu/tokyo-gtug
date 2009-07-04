@@ -2,16 +2,16 @@
 import logging
 
 from google.appengine.api import memcache, users
+from google.appengine.api.labs import taskqueue
 from google.appengine.ext import db
 from werkzeug import (
-  unescape, redirect, Response,
+  unescape, redirect, Response, MultiDict
 )
 from werkzeug.exceptions import (
   HTTPException,
   NotFound, MethodNotAllowed, BadRequest
 )
 from werkzeug._internal import HTTP_STATUS_CODES
-
 from kay.utils import (
   render_to_response, reverse,
   get_by_key_name_or_404, get_by_id_or_404,
@@ -20,20 +20,23 @@ from kay.utils import (
 from kay.i18n import gettext as _
 from kay.auth.decorators import login_required
 
+def get_query_strings(request):
+  return MultiDict((q.split("=") for q in request.environ["QUERY_STRING"].split("&") if "=" in q))
+
 def get(request, model, item):
   if item == None:
-    data = model.all()
+    data = model.all().fetch(100)
   elif isinstance(item, int):
     try:
-      data = model.get_by_id(item)
+      data = [model.get_by_id(item)]
     except db.BadKeyError:
       raise NotFound
   else:
     data = model.get_by_key_name(item)
-  if data:
-    data = data.get()
-  else:
-    raise NotFound
+    if data:
+      data = data.get()
+    else:
+      raise NotFound
   return 200, dict(data=data), {}
 
 def head(request, model, item):
@@ -42,15 +45,23 @@ def head(request, model, item):
 def post(request, model, item):
   if item != None:
     raise
-  elif isinstance(item, int):
-    data = model.get_by_id(item)
-  else:
-    data = model.get_by_key_name(item)
-  if data:
-    data = data.get()
-  else:
-    raise NotFound
-  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
+  import yaml
+  raw = request.form
+  if not raw:
+    raise BadRequest
+  if data.get("sync") != True:
+    if get_query_strings(request).get("sync") != "true":
+      _data, _mimetype = format_yaml({"sync": True, "request": request})
+      task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
+      all = model.all().fetch(100)
+      result = {"data":data, "all":all, "count":len(all), "task": task}
+      return 202, result, {}
+  _request = data.get("request")
+  data = model(**(dict((x,x) for x in ["comment", "title", "start", "discription"])))
+  __request, _mimetype = format_yaml(request)
+  data.discription = _request or __request
+  data.put()
+  return 201, data, {}
 
 def put(request, model, item):
   return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
@@ -89,11 +100,21 @@ methods = Methods({
 
 def format_json(data):
   import simplejson as json
-  return json.dumps(data), "text/json"
+  item = dict()
+  result = list()
+  for d in data["data"]:
+    item.update(d._entity)
+    item.update(key=str(d.key()))
+    result.append(item)
+  return json.dumps(result, indent=2, skipkeys=True), "text/json"
 
 def format_yaml(data):
   import yaml
   return yaml.dump(data, default_flow_style=False), "text/yaml"
+
+def format_xml(data):
+  data = [d.to_xml() for d in data["data"]]
+  return data, "text/xml"
 
 class Formater(dict):
   def __getitem__(self, name):
