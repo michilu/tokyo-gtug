@@ -36,9 +36,22 @@ class RESTTestCase(TestCase):
     self.assertEqual(response.status_code, 404)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
 
-    #response = self.client.get('/event/1')
-    #self.assertEqual(response.status_code, 200)
-    #self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+    response = self.client.get('/event/1')
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+
+    response = self.client.get('/event/1.json')
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.headers["Content-Type"], "text/json; charset=utf-8")
+
+    response = self.client.get('/event/10000000000000')
+    self.assertEqual(response.status_code, 404)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+
+  def test_get_slice(self):
+    #response = self.client.get('/event/1:2')
+    #response = self.client.get('/event/-2:-2')
+    pass
 
   def test_head(self):
     response = self.client.head('/event')

@@ -24,19 +24,31 @@ def get_query_strings(request):
   return MultiDict((q.split("=") for q in request.environ["QUERY_STRING"].split("&") if "=" in q))
 
 def get(request, model, item):
+  #data = model.get_by_key_name(item)
+  #return 200, dict(data=data), {}
+  #--
   if item == None:
     data = model.all().fetch(100)
   elif isinstance(item, int):
     try:
-      data = [model.get_by_id(item)]
+      data = model.get_by_id(item)
     except db.BadKeyError:
       raise NotFound
-  else:
-    data = model.get_by_key_name(item)
-    if data:
-      data = data.get()
     else:
+      if data:
+        data = [data]
+      else:
+        raise NotFound
+  else:
+    try:
+      data = model.get_by_key_name(item)
+    except db.BadArgumentError:
       raise NotFound
+    else:
+      if data:
+        data = data.get()
+      else:
+        raise NotFound
   return 200, dict(data=data), {}
 
 def head(request, model, item):
@@ -105,6 +117,7 @@ def format_json(data):
     for d in data["data"]:
       item = dict()
       item.update(d._entity)
+      item.update(id=d.key().id())
       item.update(key=str(d.key()))
       result.append(item)
   else:
