@@ -60,6 +60,8 @@ class RESTTestCase(TestCase):
     self.assertEqual("".join(response.response), "")
 
   def test_post_model(self):
+    from StringIO import StringIO
+
     data = "DATA"
 
     #ASYNC
@@ -75,6 +77,10 @@ class RESTTestCase(TestCase):
     self.assertEqual(response.status_code, 202)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
 
+    response = self.client.post('/event', data={"file": (StringIO(data), "data.txt")})
+    self.assertEqual(response.status_code, 202)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+
     #SYNC
     response = self.client.post('/event?sync=true')
     self.assertEqual(response.status_code, 400)
@@ -84,4 +90,10 @@ class RESTTestCase(TestCase):
     self.assertEqual(response.status_code, 201)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
     self.assertNotEqual("".join(response.response), "")
+
+    response = self.client.post('/event?sync=true', data={"file": (StringIO(data), "data.txt")})
+    self.assertEqual(response.status_code, 201)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+    self.assertNotEqual("".join(response.response), "")
+
 

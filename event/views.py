@@ -64,18 +64,20 @@ def post(request, model, item):
   if item != None:
     raise
   import yaml
-  raw = request.form
-  if not raw:
+  if "data" in request.form.keys():
+    data = yaml.load(request.form["data"])
+  elif "file" in request.files.keys():
+    data = yaml.load(request.files["file"])
+  else:
     raise BadRequest
-  data = yaml.load(raw.keys()[0])
   if isinstance(data, dict):
     if data.get("sync") != True:
-     if get_query_strings(request).get("sync") != "true":
-       _data, _mimetype = format_yaml({"sync": True, "request": request})
-       task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
-       all = model.all().fetch(100)
-       result = {"data":data, "all":all, "count":len(all), "task": task}
-       return 202, result, {}
+      if get_query_strings(request).get("sync") != "true":
+        _data, _mimetype = format_yaml({"sync": True, "request": request})
+        task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
+        all = model.all().fetch(100)
+        result = {"data":data, "all":all, "count":len(all), "task": task}
+        return 202, result, {}
     _request = data.get("request")
   else:
     if get_query_strings(request).get("sync") != "true":
