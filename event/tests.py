@@ -31,6 +31,15 @@ class RESTTestCase(TestCase):
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
 
+  def test_get_model_index(self):
+    import yaml
+    response = self.client.get('/event?type=index')
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+    response_index = yaml.load("".join(response.response))
+    self.assertEqual(response_index.keys(), ["index"])
+    self.assertTrue(all(isinstance(i, long) for i in response_index["index"]))
+
   def test_get_item(self):
     response = self.client.get('/event/0')
     self.assertEqual(response.status_code, 404)

@@ -49,7 +49,11 @@ def get(request, model, item):
         data = data.get()
       else:
         raise NotFound
-  return 200, dict(data=data), {}
+  if get_query_strings(request).get("type") == "index":
+    result = dict(index=[i.key().id() for i in data])
+  else:
+    result = dict(data=data)
+  return 200, result, {}
 
 def head(request, model, item):
   return get(request, model, item)
