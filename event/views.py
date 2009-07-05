@@ -54,6 +54,12 @@ def get(request, model, item):
 def head(request, model, item):
   return get(request, model, item)
 
+def is_sync(data):
+  if isinstance(data, dict):
+    return data.get("sync") == True
+  elif isinstance(data, basestring):
+    return
+
 def post(request, model, item):
   if item != None:
     raise
@@ -61,14 +67,24 @@ def post(request, model, item):
   raw = request.form
   if not raw:
     raise BadRequest
-  if data.get("sync") != True:
+  data = yaml.load(raw.keys()[0])
+  if isinstance(data, dict):
+    if data.get("sync") != True:
+     if get_query_strings(request).get("sync") != "true":
+       _data, _mimetype = format_yaml({"sync": True, "request": request})
+       task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
+       all = model.all().fetch(100)
+       result = {"data":data, "all":all, "count":len(all), "task": task}
+       return 202, result, {}
+    _request = data.get("request")
+  else:
     if get_query_strings(request).get("sync") != "true":
       _data, _mimetype = format_yaml({"sync": True, "request": request})
       task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
       all = model.all().fetch(100)
       result = {"data":data, "all":all, "count":len(all), "task": task}
       return 202, result, {}
-  _request = data.get("request")
+    _request = data
   data = model(**(dict((x,x) for x in ["comment", "title", "start", "discription"])))
   __request, _mimetype = format_yaml(request)
   data.discription = _request or __request
