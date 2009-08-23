@@ -23,32 +23,46 @@ from kay.auth.decorators import login_required
 def get_query_strings(request):
   return MultiDict((q.split("=") for q in request.environ["QUERY_STRING"].split("&") if "=" in q))
 
+def is_int(value):
+  try:
+    int(value)
+  except ValueError:
+    return False
+  return True
+
+def get_item(model, id):
+  result = None
+  if is_int(id):
+    id = int(id)
+    try:
+      data = model.get_by_id(id)
+    except db.BadKeyError:
+      pass
+    else:
+      if data:
+        result = data
+  else:
+    try:
+      data = model.get_by_key_name(id)
+    except db.BadArgumentError:
+      pass
+    else:
+      if data:
+        #result = data.get()
+        result = data
+  return result
+
 def get(request, model, item):
   #data = model.get_by_key_name(item)
   #return 200, dict(data=data), {}
   #--
   if item == None:
     data = model.all().fetch(100)
-  elif isinstance(item, int):
-    try:
-      data = model.get_by_id(item)
-    except db.BadKeyError:
-      raise NotFound
-    else:
-      if data:
-        data = [data]
-      else:
-        raise NotFound
   else:
-    try:
-      data = model.get_by_key_name(item)
-    except db.BadArgumentError:
+    data = get_item(model, item)
+    if data == None:
       raise NotFound
-    else:
-      if data:
-        data = data.get()
-      else:
-        raise NotFound
+    data = [data]
   if get_query_strings(request).get("type") == "index":
     result = dict(index=[i.key().id() for i in data])
   else:
@@ -66,7 +80,7 @@ def is_sync(data):
 
 def post(request, model, item):
   if item != None:
-    raise
+    raise XXX
   import yaml
   if "data" in request.form.keys():
     data = yaml.load(request.form["data"])
@@ -80,7 +94,7 @@ def post(request, model, item):
         _data, _mimetype = format_yaml({"sync": True, "request": request})
         task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
         all = model.all().fetch(100)
-        result = {"data":data, "all":all, "count":len(all), "task": task}
+        result = {"data": data, "all": all, "count": len(all), "task": task}
         return 202, result, {}
     _request = data.get("request")
   else:
@@ -88,7 +102,7 @@ def post(request, model, item):
       _data, _mimetype = format_yaml({"sync": True, "request": request})
       task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
       all = model.all().fetch(100)
-      result = {"data":data, "all":all, "count":len(all), "task": task}
+      result = {"data": data, "all": all, "count": len(all), "task": task}
       return 202, result, {}
     _request = data
   data = model(**(dict((x,x) for x in ["comment", "title", "start", "discription"])))
@@ -98,7 +112,49 @@ def post(request, model, item):
   return 201, data, {}
 
 def put(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
+  if item == None:
+    raise XXX
+    raise BadRequest
+  import yaml
+  if "data" in request.form.keys():
+    data = yaml.load(request.form["data"])
+  elif "file" in request.files.keys():
+    data = yaml.load(request.files["file"])
+  else:
+    raise BadRequest
+  if isinstance(data, dict):
+    if data.get("sync") != True:
+      if get_query_strings(request).get("sync") != "true":
+        _data, _mimetype = format_yaml({"sync": True, "request": request})
+        task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
+        all = model.all().fetch(100)
+        result = {"data": data, "all": all, "count": len(all), "task": task}
+        return 202, result, {}
+    _request = data.get("request")
+  else:
+    if get_query_strings(request).get("sync") != "true":
+      _data, _mimetype = format_yaml({"sync": True, "request": request})
+      task = taskqueue.add(url=request.environ["PATH_INFO"], payload=_data)
+      all = model.all().fetch(100)
+      result = {"data": data, "all": all, "count": len(all), "task": task}
+      return 202, result, {}
+    _request = data
+  store = get_item(model, item)
+  info = dict()
+  if store == None:
+    if is_int(item):
+      raise BadRequest
+    else:
+      info.update({"key_name": "%s" % item})
+  info.update((x,x) for x in ["comment", "title", "start", "discription"])
+  store = model(**(info))
+  __request, _mimetype = format_yaml(request)
+  #[setattr(store, k, v) for k,v in data.items()]
+  store.update = data
+  store.discription = _request or __request
+  store.put()
+  #store.id_or_name = store.key().id_or_name()
+  return 200, store, {}
 
 def delete(request, model, item):
   return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
@@ -177,3 +233,4 @@ def rest(model, methods=methods, acl=None, formater=formater):
     return Response(_(result if result.endswith("\n") else "%s\n" % result),
              status=status_code, headers=headers, mimetype=mimetype)
   return func
+

@@ -30,8 +30,8 @@ import event.models
 resource = RuleTemplate([
     Rule('/$resource', endpoint='$resource'),
     Rule('/$resource.<format>', endpoint='$resource'),
-    Rule('/$resource/<int:item>', endpoint='$resource'),
-    Rule('/$resource/<int:item>.<format>', endpoint='$resource'),
+    Rule('/$resource/<item>', endpoint='$resource'),
+    Rule('/$resource/<item>.<format>', endpoint='$resource'),
     #Rule('/<model>', endpoint='$resource'),
     #Rule('/<model>.<format>', endpoint='$resource'),
     #Rule('/<model>/<int:item>', endpoint='$resource'),
