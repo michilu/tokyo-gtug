@@ -186,3 +186,46 @@ class RESTTestCase(TestCase):
 
     test("ITEM")
 
+  def test_sync_delete_model(self):
+    from StringIO import StringIO
+
+    import yaml
+
+    data = "DATA"
+
+    def test(id=0, status_code=None):
+      default = 200
+      if status_code == None:
+        status_code = default
+      response = self.client.get('/event/%s' % id)
+      self.assertEqual(response.status_code, status_code)
+      self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+      if status_code != default:
+        return
+      content = yaml.load("".join(response.response))
+      self.assertEqual(len(content["data"]), 1)
+
+    test("ITEM", 404)
+
+    response = self.client.delete('/event/ITEM?sync=true', data={"data": data})
+    self.assertEqual(response.status_code, 404)
+
+    response = self.client.delete('/event/ITEM')
+    self.assertEqual(response.status_code, 404)
+
+    test("ITEM", 404)
+
+    response = self.client.put('/event/ITEM?sync=true', data={"data": data})
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+    self.assertNotEqual("".join(response.response), "")
+
+    test("ITEM")
+
+    response = self.client.delete('/event/ITEM')
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.headers["Content-Type"], "text/yaml; charset=utf-8")
+    self.assertNotEqual("".join(response.response), "")
+
+    test("ITEM", 404)
+

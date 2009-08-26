@@ -157,7 +157,14 @@ def put(request, model, item):
   return 200, store, {}
 
 def delete(request, model, item):
-  return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
+  if item == None:
+    raise XXX
+    raise BadRequest
+  store = get_item(model, item)
+  if store == None:
+    raise NotFound
+  store.delete()
+  return 200, None, {}
 
 def options(request, model, item):
   return 200, dict(data=request.environ["REQUEST_METHOD"]), {}
